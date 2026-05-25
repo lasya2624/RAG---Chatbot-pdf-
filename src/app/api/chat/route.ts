@@ -23,30 +23,27 @@ const queryDocumentsTool = tool({
         return { context: "Error: You must provide a specific search query string to use this tool. Please try calling the tool again with a detailed query parameter." };
       }
 
-      const { ChromaClient } = await import('chromadb');
-      const { chromaEmbeddingFunction } = await import('@/lib/embeddings');
-      const client = new ChromaClient({ path: process.env.CHROMA_URL || "http://localhost:8000" });
+      const { Pinecone } = await import('@pinecone-database/pinecone');
+      const pc = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
+      const indexName = process.env.PINECONE_INDEX_NAME || 'rag-documents';
+      const index = pc.Index(indexName);
       
       try {
-        const collection = await client.getCollection({ 
-          name: "documents",
-          embeddingFunction: chromaEmbeddingFunction
-        });
         const queryEmbedding = await localEmbeddings.embedQuery(query);
         
-        const results = await collection.query({
-          queryEmbeddings: [queryEmbedding], // Explicitly wrap in array for Chroma 3.x
-          nResults: 3,
+        const results = await index.query({
+          vector: queryEmbedding,
+          topK: 10,
+          includeMetadata: true
         });
 
-        // The documents are returned as a 2D array: documents[queryIndex][resultIndex]
-        const relevantDocs = results.documents[0] || [];
+        const relevantDocs = results.matches.map((match: any) => match.metadata?.text || '');
         const context = relevantDocs.join('\n---\n');
         
-        console.log(`Found ${relevantDocs.length} relevant context chunks.`);
+        console.log(`Found ${results.matches.length} relevant context chunks.`);
         return { context: context || "No relevant information found." };
       } catch (e: any) {
-        console.error("Chroma collection error:", e.message);
+        console.error("Pinecone query error:", e.message);
         return { context: "Document store is unavailable or empty." };
       }
     } catch (error) {

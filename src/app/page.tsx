@@ -80,8 +80,8 @@ export default function Chat() {
     <div className="flex flex-col h-screen max-w-4xl mx-auto p-4 md:p-8 bg-background">
       <header className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-primary">AI Chatbot</h1>
-          <p className="text-muted-foreground">Production-ready RAG with Gemini & Chroma</p>
+          <h1 className="text-3xl font-bold tracking-tight">AI Document Assistant</h1>
+          <p className="text-muted-foreground">Serverless RAG with Gemini & Pinecone</p>
         </div>
         <div className="flex items-center gap-3">
           {uploadedFileName && (
@@ -193,8 +193,8 @@ export default function Chat() {
         </form>
       </Card>
       
-      <footer className="mt-4 text-center text-xs text-muted-foreground">
-        Powered by Google Gemini & ChromaDB • Built with Vercel AI SDK
+      <footer className="text-center text-xs text-muted-foreground mt-8">
+        Powered by Google Gemini & Pinecone • Built with Vercel AI SDK
       </footer>
     </div>
   );

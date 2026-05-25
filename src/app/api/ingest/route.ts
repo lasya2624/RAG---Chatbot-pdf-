@@ -30,42 +30,51 @@ export async function POST(req: Request) {
     }
 
     const splitter = new RecursiveCharacterTextSplitter({
-      chunkSize: 500,
-      chunkOverlap: 50,
+      chunkSize: 1000,
+      chunkOverlap: 200,
     });
 
     const docs = await splitter.createDocuments([text]);
     console.log(`Split document into ${docs.length} chunks.`);
 
-    console.log("Generating embeddings locally using Transformers.js...");
-
-    const chromaUrl = process.env.CHROMA_URL || "http://localhost:8000";
-    
-    const { ChromaClient } = await import('chromadb');
-    const { chromaEmbeddingFunction } = await import('@/lib/embeddings');
-    
-    // ✅ FIX: Use ChromaClient to delete collection properly
-    const client = new ChromaClient({ path: chromaUrl });
-    try {
-      await client.deleteCollection({ name: "documents" });
-      console.log("Deleted existing collection 'documents'");
-    } catch (e: any) {
-      console.log("Collection check/delete: " + (e.message || "No existing collection found"));
-    }
-
-    // ✅ Create new collection natively with explicit embedding function to fix warning
-    const collection = await client.createCollection({
-      name: "documents",
-      embeddingFunction: chromaEmbeddingFunction
-    });
-
+    console.log("Generating embeddings using Google Gemini API...");
     const textsToEmbed = docs.map(doc => doc.pageContent);
     const docIds = docs.map((_, i) => `chunk_${i}`);
+    
+    // Generate embeddings
+    const embeddings = await localEmbeddings.embedDocuments(textsToEmbed);
 
-    await collection.add({
-      ids: docIds,
-      documents: textsToEmbed,
-    });
+    const { Pinecone } = await import('@pinecone-database/pinecone');
+    const pc = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
+    const indexName = process.env.PINECONE_INDEX_NAME || 'rag-documents';
+    const index = pc.Index(indexName);
+
+    // Delete existing vectors so the bot only answers from the latest PDF
+    try {
+      await index.deleteAll();
+      console.log(`Cleared existing vectors in Pinecone index '${indexName}'`);
+    } catch (e: any) {
+      console.log("Index clear check: " + (e.message || "Could not clear index"));
+    }
+
+    // Format for Pinecone
+    const records = docIds.map((id, i) => ({
+      id,
+      values: embeddings[i],
+      metadata: { text: textsToEmbed[i] }
+    }));
+
+    console.log(`Prepared ${records.length} records for Pinecone.`);
+    if (records.length === 0) {
+      throw new Error(`Records array is empty. Docs length: ${docs.length}, Embeddings length: ${embeddings?.length}`);
+    }
+    
+    if (!records[0].values || records[0].values.length === 0) {
+      throw new Error(`Embedding values are missing or empty for the first record.`);
+    }
+
+    // Upsert to Pinecone
+    await index.upsert({ records });
 
     console.log("Ingestion complete.");
     return NextResponse.json({
