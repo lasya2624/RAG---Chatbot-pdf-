@@ -1,7 +1,7 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { tool, ToolLoopAgent, createAgentUIStreamResponse } from 'ai';
 import { z } from 'zod';
-import { Chroma } from "@langchain/community/vectorstores/chroma";
+// Import removed
 import { localEmbeddings } from '@/lib/embeddings';
 
 const google = createGoogleGenerativeAI({

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import pdf from 'pdf-parse';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
-import { Chroma } from "@langchain/community/vectorstores/chroma";
+// Import removed
 import { localEmbeddings } from '@/lib/embeddings';
 
 export async function POST(req: Request) {
