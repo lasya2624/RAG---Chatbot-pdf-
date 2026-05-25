@@ -14,6 +14,7 @@ const queryDocumentsTool = tool({
   parameters: z.object({
     query: z.string().describe('The search query to look for in the documents'),
   }),
+  // @ts-ignore
   execute: async ({ query }) => {
     try {
       console.log(`Querying documents for: "${query}" using local embeddings...`);
