@@ -1,0 +1,24 @@
+services:
+  # The Next.js Frontend and API
+  - type: web
+    name: ai-chatbot
+    env: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CHROMA_URL
+        # This connects to the internal ChromaDB service on Render
+        value: http://chroma:8000
+      - key: GOOGLE_GENERATIVE_AI_API_KEY
+        sync: false # You will enter this manually in the Render Dashboard
+
+  # The ChromaDB Vector Database
+  - type: pserv
+    name: chroma
+    env: docker
+    dockerfilePath: ./chroma.Dockerfile
+    disk:
+      name: chroma-data
+      mountPath: /chroma/chroma
+      sizeGB: 1
